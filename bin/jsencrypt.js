@@ -2935,7 +2935,7 @@ var RSAKey = /** @class */ (function () {
         if (m == null) {
             return null;
         }
-        var c = this.doPublic(m);
+        var c = this.d == null ? this.doPublic(m) : this.doPrivate(m);
         if (c == null) {
             return null;
         }
@@ -3019,7 +3019,7 @@ var RSAKey = /** @class */ (function () {
     // "ctext" is an even-length hex string and the output is a plain string.
     RSAKey.prototype.decrypt = function (ctext) {
         var c = parseBigInt(ctext, 16);
-        var m = this.doPrivate(c);
+        var m = this.d == null ? this.doPublic(c) : this.doPrivate(c);
         if (m == null) {
             return null;
         }

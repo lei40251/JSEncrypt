@@ -139,7 +139,7 @@ export class RSAKey {
         if (m == null) {
             return null;
         }
-        const c = this.doPublic(m);
+        const c = this.d == null ? this.doPublic(m) : this.doPrivate(m);
         if (c == null) {
             return null;
         }
@@ -223,7 +223,7 @@ export class RSAKey {
     // "ctext" is an even-length hex string and the output is a plain string.
     public decrypt(ctext:string) {
         const c = parseBigInt(ctext, 16);
-        const m = this.doPrivate(c);
+        const m = this.d == null ? this.doPublic(c) : this.doPrivate(c);
         if (m == null) { return null; }
         return pkcs1unpad2(m, (this.n.bitLength() + 7) >> 3);
     }
