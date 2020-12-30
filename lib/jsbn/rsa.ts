@@ -25,24 +25,8 @@ import { SecureRandom } from "./rng";
 //     return b.toString(16);
 // }
 
-function pkcs1pad1(s:string, n:number) {
-    if (n < s.length + 22) {
-        console.error("Message too long for RSA");
-        return null;
-    }
-    const len = n - s.length - 6;
-    let filler = "";
-    for (let f = 0; f < len; f += 2) {
-        filler += "ff";
-    }
-    const m = "0001" + filler + "00" + s;
-    return parseBigInt(m, 16);
-}
-
-// PKCS#1 (type 2, random) pad input string s to n bytes, and return a bigint
-function pkcs1pad2(s:string, n:number) {
+function pkcs1pad(s:string, n:number, forPrivateKey:boolean) {
     if (n < s.length + 11) { // TODO: fix for utf-8
-
         console.error("Message too long for RSA");
         return null;
     }
@@ -62,18 +46,71 @@ function pkcs1pad2(s:string, n:number) {
         }
     }
     ba[--n] = 0;
-    const rng = new SecureRandom();
-    const x = [];
-    while (n > 2) { // random non-zero pad
-        x[0] = 0;
-        while (x[0] == 0) {
-            rng.nextBytes(x);
+    if (forPrivateKey) {
+        // for private key we are going to pad with /^1F+/ bytes
+        while (n > 2) {
+            ba[--n] = 255;
         }
-        ba[--n] = x[0];
+        ba[--n] = 1;
+        ba[--n] = 0;
+    } else {
+        // for public key we are going to pad with random numbers
+        const rng = new SecureRandom();
+        const x = [];
+        while (n > 2) { // random non-zero pad
+            x[0] = 0;
+            while (x[0] == 0) {
+                rng.nextBytes(x);
+            }
+            ba[--n] = x[0];
+        }
+        ba[--n] = 2;
+        ba[--n] = 0;
     }
-    ba[--n] = 2;
-    ba[--n] = 0;
     return new BigInteger(ba);
+}
+
+function pkcs1unpad(d:BigInteger, n:number, forPrivateKey:boolean):string {
+    const b = d.toByteArray();
+    let i = 0;
+    while (i < b.length && b[i] == 0) {
+        ++i;
+    }
+    if (forPrivateKey) {
+        if (b.length - i != n - 1 || b[i] != 2) {
+            return null;
+        }
+        ++i;
+        while (b[i] != 0) {
+            if (++i >= b.length) {
+                return null;
+            }
+        }
+    } else {
+        if (b.length - i != n - 1 || b[i] != 1) {
+            return null;
+        }
+        ++i;
+        while (b[i] != 0) {
+            if (++i >= b.length) {
+                return null;
+            }
+        }
+    }
+    let ret = "";
+    while (++i < b.length) {
+        const c = b[i] & 255;
+        if (c < 128) { // utf-8 decode
+            ret += String.fromCharCode(c);
+        } else if ((c > 191) && (c < 224)) {
+            ret += String.fromCharCode(((c & 31) << 6) | (b[i + 1] & 63));
+            ++i;
+        } else {
+            ret += String.fromCharCode(((c & 15) << 12) | ((b[i + 1] & 63) << 6) | (b[i + 2] & 63));
+            i += 2;
+        }
+    }
+    return ret;
 }
 
 // "empty" RSA key constructor
@@ -134,8 +171,8 @@ export class RSAKey {
     // RSAKey.prototype.encrypt = RSAEncrypt;
     // Return the PKCS#1 RSA encryption of "text" as an even-length hex string
     public encrypt(text:string, usePrivateKey:boolean = false) {
-        const m = pkcs1pad2(text, (this.n.bitLength() + 7) >> 3);
-
+        const wl = (this.n.bitLength() + 7) >> 3;
+        const m = pkcs1pad(text, wl, usePrivateKey);
         if (m == null) {
             return null;
         }
@@ -231,7 +268,8 @@ export class RSAKey {
         if (m == null) {
             return null;
         }
-        return pkcs1unpad2(m, (this.n.bitLength() + 7) >> 3);
+        const wl = (this.n.bitLength() + 7) >> 3;
+        return pkcs1unpad(m, wl, usePrivateKey);
     }
 
     // Generate a new random private key B bits long, using public expt E
@@ -298,7 +336,8 @@ export class RSAKey {
     public sign(text:string, digestMethod:(str:string) => string, digestName:string):string {
         const header = getDigestHeader(digestName);
         const digest = header + digestMethod(text).toString();
-        const m = pkcs1pad1(digest, this.n.bitLength() / 4);
+        const wl = (this.n.bitLength() + 7) >> 3;
+        const m = pkcs1pad(digest, wl, true);
         if (m == null) {
             return null;
         }
@@ -320,7 +359,8 @@ export class RSAKey {
         if (m == null) {
             return null;
         }
-        const unpadded = m.toString(16).replace(/^1f+00/, "");
+        const wl = (this.n.bitLength() + 7) >> 3;
+        const unpadded = pkcs1unpad(m, wl, false);
         const digest = removeDigestHeader(unpadded);
         return digest == digestMethod(text).toString();
     }
@@ -343,39 +383,6 @@ export class RSAKey {
 
     protected coeff:BigInteger;
 
-}
-
-
-// Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
-function pkcs1unpad2(d:BigInteger, n:number):string {
-    const b = d.toByteArray();
-    let i = 0;
-    while (i < b.length && b[i] == 0) {
-        ++i;
-    }
-    if (b.length - i != n - 1 || b[i] != 2) {
-        return null;
-    }
-    ++i;
-    while (b[i] != 0) {
-        if (++i >= b.length) {
-            return null;
-        }
-    }
-    let ret = "";
-    while (++i < b.length) {
-        const c = b[i] & 255;
-        if (c < 128) { // utf-8 decode
-            ret += String.fromCharCode(c);
-        } else if ((c > 191) && (c < 224)) {
-            ret += String.fromCharCode(((c & 31) << 6) | (b[i + 1] & 63));
-            ++i;
-        } else {
-            ret += String.fromCharCode(((c & 15) << 12) | ((b[i + 1] & 63) << 6) | (b[i + 2] & 63));
-            i += 2;
-        }
-    }
-    return ret;
 }
 
 // https://tools.ietf.org/html/rfc3447#page-43
