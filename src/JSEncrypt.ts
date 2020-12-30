@@ -1,5 +1,5 @@
-import {b64tohex, hex2b64} from "../lib/jsbn/base64";
-import {JSEncryptRSAKey} from "./JSEncryptRSAKey";
+import { b64tohex, hex2b64 } from "../lib/jsbn/base64";
+import { JSEncryptRSAKey } from "./JSEncryptRSAKey";
 
 
 declare var JSENCRYPT_VERSION:string;
@@ -30,8 +30,11 @@ export default class JSEncrypt {
     }
 
     private default_key_size:number;
+
     private default_public_exponent:string;
+
     private log:boolean;
+
     private key:JSEncryptRSAKey;
 
     public static version:string = JSENCRYPT_VERSION;
@@ -78,10 +81,10 @@ export default class JSEncrypt {
      * @return {string} the decrypted string
      * @public
      */
-    public decrypt(str:string) {
+    public decrypt(str:string, withPrivateKey:boolean = true) {
         // Return the decrypted string.
         try {
-            return this.getKey().decrypt(b64tohex(str));
+            return this.getKey().decrypt(b64tohex(str), withPrivateKey);
         } catch (ex) {
             return false;
         }
@@ -95,10 +98,10 @@ export default class JSEncrypt {
      * @return {string} the encrypted string encoded in base64
      * @public
      */
-    public encrypt(str:string) {
+    public encrypt(str:string, withPrivateKey:boolean = false) {
         // Return the encrypted string.
         try {
-            return hex2b64(this.getKey().encrypt(str));
+            return hex2b64(this.getKey().encrypt(str, withPrivateKey));
         } catch (ex) {
             return false;
         }
@@ -112,7 +115,7 @@ export default class JSEncrypt {
      * @return {string} the signature encoded in base64
      * @public
      */
-    public sign(str:string, digestMethod:(str:string) => string, digestName:string):string|false {
+    public sign(str:string, digestMethod:(str:string) => string, digestName:string):string | false {
         // return the RSA signature of 'str' in 'hex' format.
         try {
             return hex2b64(this.getKey().sign(str, digestMethod, digestName));

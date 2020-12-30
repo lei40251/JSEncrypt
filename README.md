@@ -1,6 +1,3 @@
-Website
-======================
-http://travistidwell.com/jsencrypt
 
 Introduction
 ======================

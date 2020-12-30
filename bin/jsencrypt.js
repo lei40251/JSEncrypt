@@ -129,18 +129,18 @@ function b64tohex(s) {
 }
 
 /*! *****************************************************************************
-Copyright (c) Microsoft Corporation. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at http://www.apache.org/licenses/LICENSE-2.0
+Copyright (c) Microsoft Corporation.
 
-THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-MERCHANTABLITY OR NON-INFRINGEMENT.
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
 
-See the Apache Version 2.0 License for specific language governing permissions
-and limitations under the License.
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 /* global Reflect, Promise */
 
@@ -2904,16 +2904,16 @@ var RSAKey = /** @class */ (function () {
     // RSAKey.prototype.doPrivate = RSADoPrivate;
     // Perform raw private operation on "x": return x^d (mod n)
     RSAKey.prototype.doPrivate = function (x) {
-        // if (this.p == null || this.q == null) {
-        return x.modPow(this.d, this.n);
-        // }
+        if (this.p == null || this.q == null) {
+            return x.modPow(this.d, this.n);
+        }
         // TODO: re-calculate any missing CRT params
-        // let xp = x.mod(this.p).modPow(this.dmp1, this.p);
-        // const xq = x.mod(this.q).modPow(this.dmq1, this.q);
-        // while (xp.compareTo(xq) < 0) {
-        //    xp = xp.add(this.p);
-        // }
-        // return xp.subtract(xq).multiply(this.coeff).mod(this.p).multiply(this.q).add(xq);
+        var xp = x.mod(this.p).modPow(this.dmp1, this.p);
+        var xq = x.mod(this.q).modPow(this.dmq1, this.q);
+        while (xp.compareTo(xq) < 0) {
+            xp = xp.add(this.p);
+        }
+        return xp.subtract(xq).multiply(this.coeff).mod(this.p).multiply(this.q).add(xq);
     };
     //#endregion PROTECTED
     //#region PUBLIC
@@ -2930,12 +2930,13 @@ var RSAKey = /** @class */ (function () {
     };
     // RSAKey.prototype.encrypt = RSAEncrypt;
     // Return the PKCS#1 RSA encryption of "text" as an even-length hex string
-    RSAKey.prototype.encrypt = function (text) {
+    RSAKey.prototype.encrypt = function (text, usePrivateKey) {
+        if (usePrivateKey === void 0) { usePrivateKey = false; }
         var m = pkcs1pad2(text, (this.n.bitLength() + 7) >> 3);
         if (m == null) {
             return null;
         }
-        var c = this.d == null ? this.doPublic(m) : this.doPrivate(m);
+        var c = usePrivateKey ? this.doPrivate(m) : this.doPublic(m);
         if (c == null) {
             return null;
         }
@@ -3017,9 +3018,10 @@ var RSAKey = /** @class */ (function () {
     // RSAKey.prototype.decrypt = RSADecrypt;
     // Return the PKCS#1 RSA decryption of "ctext".
     // "ctext" is an even-length hex string and the output is a plain string.
-    RSAKey.prototype.decrypt = function (ctext) {
+    RSAKey.prototype.decrypt = function (ctext, usePrivateKey) {
+        if (usePrivateKey === void 0) { usePrivateKey = true; }
         var c = parseBigInt(ctext, 16);
-        var m = this.d == null ? this.doPublic(c) : this.doPrivate(c);
+        var m = usePrivateKey ? this.doPrivate(c) : this.doPublic(c);
         if (m == null) {
             return null;
         }
@@ -3050,7 +3052,9 @@ var RSAKey = /** @class */ (function () {
                     rsa.dmp1 = rsa.d.mod(p1);
                     rsa.dmq1 = rsa.d.mod(q1);
                     rsa.coeff = rsa.q.modInverse(rsa.p);
-                    setTimeout(function () { callback(); }, 0); // escape
+                    setTimeout(function () {
+                        callback();
+                    }, 0); // escape
                 }
                 else {
                     setTimeout(loop1, 0);
@@ -5234,10 +5238,11 @@ var JSEncrypt = /** @class */ (function () {
      * @return {string} the decrypted string
      * @public
      */
-    JSEncrypt.prototype.decrypt = function (str) {
+    JSEncrypt.prototype.decrypt = function (str, withPrivateKey) {
+        if (withPrivateKey === void 0) { withPrivateKey = true; }
         // Return the decrypted string.
         try {
-            return this.getKey().decrypt(b64tohex(str));
+            return this.getKey().decrypt(b64tohex(str), withPrivateKey);
         }
         catch (ex) {
             return false;
@@ -5251,10 +5256,11 @@ var JSEncrypt = /** @class */ (function () {
      * @return {string} the encrypted string encoded in base64
      * @public
      */
-    JSEncrypt.prototype.encrypt = function (str) {
+    JSEncrypt.prototype.encrypt = function (str, withPrivateKey) {
+        if (withPrivateKey === void 0) { withPrivateKey = false; }
         // Return the encrypted string.
         try {
-            return hex2b64(this.getKey().encrypt(str));
+            return hex2b64(this.getKey().encrypt(str, withPrivateKey));
         }
         catch (ex) {
             return false;

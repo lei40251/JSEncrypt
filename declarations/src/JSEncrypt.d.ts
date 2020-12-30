@@ -1,9 +1,11 @@
 import { JSEncryptRSAKey } from "./JSEncryptRSAKey";
+
 export interface IJSEncryptOptions {
-    default_key_size?: string;
-    default_public_exponent?: string;
-    log?: boolean;
+    default_key_size?:string;
+    default_public_exponent?:string;
+    log?:boolean;
 }
+
 /**
  *
  * @param {Object} [options = {}] - An object to customize JSEncrypt behaviour
@@ -14,12 +16,18 @@ export interface IJSEncryptOptions {
  * @constructor
  */
 export declare class JSEncrypt {
-    constructor(options: IJSEncryptOptions);
+    constructor(options:IJSEncryptOptions);
+
     private default_key_size;
+
     private default_public_exponent;
+
     private log;
+
     private key;
-    static version: string;
+
+    static version:string;
+
     /**
      * Method to set the rsa key parameter (one method is enough to set both the public
      * and the private key, since the private key contains the public key paramenters)
@@ -27,19 +35,22 @@ export declare class JSEncrypt {
      * @param {Object|string} key the pem encoded string or an object (with or without header/footer)
      * @public
      */
-    setKey(key: string): void;
+    setKey(key:string):void;
+
     /**
      * Proxy method for setKey, for api compatibility
      * @see setKey
      * @public
      */
-    setPrivateKey(privkey: string): void;
+    setPrivateKey(privkey:string):void;
+
     /**
      * Proxy method for setKey, for api compatibility
      * @see setKey
      * @public
      */
-    setPublicKey(pubkey: string): void;
+    setPublicKey(pubkey:string):void;
+
     /**
      * Proxy method for RSAKey object's decrypt, decrypt the string using the private
      * components of the rsa key object. Note that if the object was not set will be created
@@ -48,7 +59,8 @@ export declare class JSEncrypt {
      * @return {string} the decrypted string
      * @public
      */
-    decrypt(str: string): string | false;
+    decrypt(str:string, withPrivateKey:boolean):string | false;
+
     /**
      * Proxy method for RSAKey object's encrypt, encrypt the string using the public
      * components of the rsa key object. Note that if the object was not set will be created
@@ -57,7 +69,8 @@ export declare class JSEncrypt {
      * @return {string} the encrypted string encoded in base64
      * @public
      */
-    encrypt(str: string): string | false;
+    encrypt(str:string, withPrivateKey:boolean):string | false;
+
     /**
      * Getter for the current JSEncryptRSAKey object. If it doesn't exists a new object
      * will be created and returned
@@ -66,33 +79,37 @@ export declare class JSEncrypt {
      * @returns {JSEncryptRSAKey} the JSEncryptRSAKey object
      * @public
      */
-    getKey(cb?: () => void): JSEncryptRSAKey;
+    getKey(cb?:() => void):JSEncryptRSAKey;
+
     /**
      * Returns the pem encoded representation of the private key
      * If the key doesn't exists a new key will be created
      * @returns {string} pem encoded representation of the private key WITH header and footer
      * @public
      */
-    getPrivateKey(): string;
+    getPrivateKey():string;
+
     /**
      * Returns the pem encoded representation of the private key
      * If the key doesn't exists a new key will be created
      * @returns {string} pem encoded representation of the private key WITHOUT header and footer
      * @public
      */
-    getPrivateKeyB64(): string;
+    getPrivateKeyB64():string;
+
     /**
      * Returns the pem encoded representation of the public key
      * If the key doesn't exists a new key will be created
      * @returns {string} pem encoded representation of the public key WITH header and footer
      * @public
      */
-    getPublicKey(): string;
+    getPublicKey():string;
+
     /**
      * Returns the pem encoded representation of the public key
      * If the key doesn't exists a new key will be created
      * @returns {string} pem encoded representation of the public key WITHOUT header and footer
      * @public
      */
-    getPublicKeyB64(): string;
+    getPublicKeyB64():string;
 }

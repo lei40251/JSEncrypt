@@ -10,8 +10,7 @@ var through = require('through2');
 var rollup = require('rollup');
 
 var lintFiles = [
-    'src/*.ts',
-    'lib/*/**.ts'
+    'src/*.ts'
 ];
 
 var licenses = [
