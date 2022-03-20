@@ -129,18 +129,18 @@ function b64tohex(s) {
 }
 
 /*! *****************************************************************************
-Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
 ***************************************************************************** */
 /* global Reflect, Promise */
 
@@ -3165,6 +3165,9 @@ var RSAKey = /** @class */ (function () {
         var digest = removeDigestHeader(unpadded);
         return digest == digestMethod(text).toString();
     };
+    RSAKey.prototype.getN = function () {
+        return this.n;
+    };
     return RSAKey;
 }());
 // https://tools.ietf.org/html/rfc3447#page-43
@@ -5198,9 +5201,9 @@ var JSEncryptRSAKey = /** @class */ (function (_super) {
  *
  * @param {Object} [options = {}] - An object to customize JSEncrypt behaviour
  * possible parameters are:
- * - default_key_size        {number}  default: 1024 the key size in bit
- * - default_public_exponent {string}  default: '010001' the hexadecimal representation of the public exponent
- * - log                     {boolean} default: false whether log warn/error or not
+ * - default_key_size        {number}  default:1024 the key size in bit
+ * - default_public_exponent {string}  default:'010001' the hexadecimal representation of the public exponent
+ * - log                     {boolean} default:false whether log warn/error or not
  * @constructor
  */
 var JSEncrypt = /** @class */ (function () {
@@ -5251,11 +5254,32 @@ var JSEncrypt = /** @class */ (function () {
      * @return {string} the decrypted string
      * @public
      */
+    // public decrypt(str:string, withPrivateKey:boolean = true) {
+    //     // Return the decrypted string.
+    //     try {
+    //         return this.getKey().decrypt(b64tohex(str), withPrivateKey);
+    //     } catch (ex) {
+    //         return false;
+    //     }
+    // }
     JSEncrypt.prototype.decrypt = function (str, withPrivateKey) {
         if (withPrivateKey === void 0) { withPrivateKey = true; }
         // Return the decrypted string.
+        var k = this.getKey();
+        var maxLength = ((k.getN().bitLength() + 7) >> 3);
         try {
-            return this.getKey().decrypt(b64tohex(str), withPrivateKey);
+            var newStr = b64tohex(str);
+            var ct_1 = "";
+            if (newStr.length > maxLength) {
+                var lt = newStr.match(/.{1,512}/g);
+                lt.forEach(function (entry) {
+                    var t1 = k.decrypt(entry);
+                    ct_1 += t1;
+                });
+                return ct_1;
+            }
+            var y = k.decrypt(b64tohex(newStr));
+            return y;
         }
         catch (ex) {
             return false;
@@ -5269,11 +5293,32 @@ var JSEncrypt = /** @class */ (function () {
      * @return {string} the encrypted string encoded in base64
      * @public
      */
+    // public encrypt(str:string, withPrivateKey:boolean = false) {
+    //     // Return the encrypted string.
+    //     try {
+    //         return hex2b64(this.getKey().encrypt(str, withPrivateKey));
+    //     } catch (ex) {
+    //         return false;
+    //     }
+    // }
     JSEncrypt.prototype.encrypt = function (str, withPrivateKey) {
         if (withPrivateKey === void 0) { withPrivateKey = false; }
-        // Return the encrypted string.
+        var k = this.getKey();
+        var maxLength = (((k.getN().bitLength() + 7) >> 3) - 11);
         try {
-            return hex2b64(this.getKey().encrypt(str, withPrivateKey));
+            var lt = [];
+            var ct_2 = "";
+            if (str.length > maxLength) {
+                lt = str.match(/.{1,245}/g);
+                lt.forEach(function (entry) {
+                    var t1 = k.encrypt(entry);
+                    ct_2 += t1;
+                });
+                return hex2b64(ct_2);
+            }
+            var t = k.encrypt(str);
+            var y = hex2b64(t);
+            return y;
         }
         catch (ex) {
             return false;

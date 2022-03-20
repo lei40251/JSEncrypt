@@ -365,6 +365,10 @@ export class RSAKey {
         return digest == digestMethod(text).toString();
     }
 
+    public getN() {
+        return this.n;
+    }
+
     //#endregion PUBLIC
 
     protected n:BigInteger;

@@ -14,9 +14,9 @@ export interface IJSEncryptOptions {
  *
  * @param {Object} [options = {}] - An object to customize JSEncrypt behaviour
  * possible parameters are:
- * - default_key_size        {number}  default: 1024 the key size in bit
- * - default_public_exponent {string}  default: '010001' the hexadecimal representation of the public exponent
- * - log                     {boolean} default: false whether log warn/error or not
+ * - default_key_size        {number}  default:1024 the key size in bit
+ * - default_public_exponent {string}  default:'010001' the hexadecimal representation of the public exponent
+ * - log                     {boolean} default:false whether log warn/error or not
  * @constructor
  */
 export default class JSEncrypt {
@@ -81,10 +81,31 @@ export default class JSEncrypt {
      * @return {string} the decrypted string
      * @public
      */
+    // public decrypt(str:string, withPrivateKey:boolean = true) {
+    //     // Return the decrypted string.
+    //     try {
+    //         return this.getKey().decrypt(b64tohex(str), withPrivateKey);
+    //     } catch (ex) {
+    //         return false;
+    //     }
+    // }
     public decrypt(str:string, withPrivateKey:boolean = true) {
         // Return the decrypted string.
+        const k = this.getKey();
+        const maxLength = ((k.getN().bitLength() + 7) >> 3);
         try {
-            return this.getKey().decrypt(b64tohex(str), withPrivateKey);
+            const newStr = b64tohex(str);
+            let ct = "";
+            if (newStr.length > maxLength) {
+                const lt = newStr.match(/.{1,512}/g);
+                lt.forEach(function (entry) {
+                    const t1 = k.decrypt(entry);
+                    ct += t1;
+                });
+                return ct;
+            }
+            const y = k.decrypt(b64tohex(newStr));
+            return y;
         } catch (ex) {
             return false;
         }
@@ -98,10 +119,31 @@ export default class JSEncrypt {
      * @return {string} the encrypted string encoded in base64
      * @public
      */
+    // public encrypt(str:string, withPrivateKey:boolean = false) {
+    //     // Return the encrypted string.
+    //     try {
+    //         return hex2b64(this.getKey().encrypt(str, withPrivateKey));
+    //     } catch (ex) {
+    //         return false;
+    //     }
+    // }
     public encrypt(str:string, withPrivateKey:boolean = false) {
-        // Return the encrypted string.
+        const k = this.getKey();
+        const maxLength = (((k.getN().bitLength() + 7) >> 3) - 11);
         try {
-            return hex2b64(this.getKey().encrypt(str, withPrivateKey));
+            let lt = [];
+            let ct = "";
+            if (str.length > maxLength) {
+                lt = str.match(/.{1,245}/g);
+                lt.forEach(function (entry) {
+                    const t1 = k.encrypt(entry);
+                    ct += t1;
+                });
+                return hex2b64(ct);
+            }
+            const t = k.encrypt(str);
+            const y = hex2b64(t);
+            return y;
         } catch (ex) {
             return false;
         }
