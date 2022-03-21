@@ -99,12 +99,12 @@ export default class JSEncrypt {
             if (newStr.length > maxLength) {
                 const lt = newStr.match(/.{1,512}/g);
                 lt.forEach(function (entry) {
-                    const t1 = k.decrypt(entry);
+                    const t1 = k.decrypt(entry, withPrivateKey);
                     ct += t1;
                 });
                 return ct;
             }
-            const y = k.decrypt(b64tohex(newStr));
+            const y = k.decrypt(b64tohex(newStr), withPrivateKey);
             return y;
         } catch (ex) {
             return false;
@@ -136,12 +136,12 @@ export default class JSEncrypt {
             if (str.length > maxLength) {
                 lt = str.match(/.{1,245}/g);
                 lt.forEach(function (entry) {
-                    const t1 = k.encrypt(entry);
+                    const t1 = k.encrypt(entry, withPrivateKey);
                     ct += t1;
                 });
                 return hex2b64(ct);
             }
-            const t = k.encrypt(str);
+            const t = k.encrypt(str, withPrivateKey);
             const y = hex2b64(t);
             return y;
         } catch (ex) {
